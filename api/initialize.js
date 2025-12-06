@@ -27,6 +27,16 @@ module.exports = async (req, res) => {
     return;
   }
 
+  // Debug: Check if environment variable exists
+  if (!process.env.POSTGRES_URL) {
+    res.status(500).json({ 
+      message: 'Database configuration missing', 
+      error: 'POSTGRES_URL environment variable is not set',
+      availableEnvVars: Object.keys(process.env).filter(k => k.includes('POSTGRES') || k.includes('DATABASE'))
+    });
+    return;
+  }
+
   const db = getConnection();
 
   try {
