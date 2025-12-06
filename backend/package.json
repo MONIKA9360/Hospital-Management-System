@@ -12,8 +12,6 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "html2canvas": "^1.4.1",
-    "mongoose": "^7.8.8",
     "mysql2": "^3.15.3"
   },
   "devDependencies": {
