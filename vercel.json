@@ -18,8 +18,5 @@
       "src": "/(.*)",
       "dest": "/$1"
     }
-  ],
-  "env": {
-    "POSTGRES_URL": "@postgres_url"
-  }
+  ]
 }
