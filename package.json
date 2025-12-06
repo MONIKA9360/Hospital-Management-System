@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "vercel-build": "vite build"
   },
   "dependencies": {
     "jspdf": "^3.0.4",
     "lucide-react": "^0.554.0",
+    "mysql2": "^3.15.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
