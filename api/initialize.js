@@ -1,13 +1,11 @@
-const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 
-// Helper function to create database connection
-function getConnection() {
-  return new Pool({
-    connectionString: process.env.POSTGRES_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
+// Helper function to create Supabase client
+function getSupabaseClient() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
 }
 
 module.exports = async (req, res) => {
@@ -27,45 +25,46 @@ module.exports = async (req, res) => {
     return;
   }
 
-  // Debug: Check if environment variable exists
-  if (!process.env.POSTGRES_URL) {
+  // Check if environment variables exist
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     res.status(500).json({ 
       message: 'Database configuration missing', 
-      error: 'POSTGRES_URL environment variable is not set',
-      availableEnvVars: Object.keys(process.env).filter(k => k.includes('POSTGRES') || k.includes('DATABASE'))
+      error: 'SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variable is not set'
     });
     return;
   }
 
-  const db = getConnection();
+  const supabase = getSupabaseClient();
 
   try {
-    const result = await db.query('SELECT COUNT(*) as count FROM patients');
+    // Check if patients exist
+    const { count, error: countError } = await supabase
+      .from('patients')
+      .select('*', { count: 'exact', head: true });
     
-    if (parseInt(result.rows[0].count) === 0) {
+    if (countError) throw countError;
+    
+    if (count === 0) {
       const samplePatients = [
-        ['ADM001', 'John Smith', 35, 'Male', 'A+', '+1-555-0123', '123 Main St, New York, NY 10001', 'Hypertension, Diabetes', '[]', null],
-        ['ADM002', 'Sarah Johnson', 28, 'Female', 'B-', '+1-555-0456', '456 Oak Ave, Los Angeles, CA 90210', 'Asthma', '[]', null],
-        ['ADM003', 'Michael Brown', 42, 'Male', 'O+', '+1-555-0789', '789 Pine Rd, Chicago, IL 60601', 'Heart Disease', '[]', null],
-        ['ADM004', 'Emily Davis', 31, 'Female', 'AB+', '+1-555-0321', '321 Elm St, Houston, TX 77001', 'Migraine, Anxiety', '[]', null],
-        ['ADM005', 'David Wilson', 55, 'Male', 'A-', '+1-555-0654', '654 Maple Dr, Phoenix, AZ 85001', 'Arthritis, High Cholesterol', '[]', null]
+        { adminNo: 'ADM001', name: 'John Smith', age: 35, gender: 'Male', bloodGroup: 'A+', contactNo: '+1-555-0123', address: '123 Main St, New York, NY 10001', healthIssue: 'Hypertension, Diabetes', medicines: [], nextAppointment: null },
+        { adminNo: 'ADM002', name: 'Sarah Johnson', age: 28, gender: 'Female', bloodGroup: 'B-', contactNo: '+1-555-0456', address: '456 Oak Ave, Los Angeles, CA 90210', healthIssue: 'Asthma', medicines: [], nextAppointment: null },
+        { adminNo: 'ADM003', name: 'Michael Brown', age: 42, gender: 'Male', bloodGroup: 'O+', contactNo: '+1-555-0789', address: '789 Pine Rd, Chicago, IL 60601', healthIssue: 'Heart Disease', medicines: [], nextAppointment: null },
+        { adminNo: 'ADM004', name: 'Emily Davis', age: 31, gender: 'Female', bloodGroup: 'AB+', contactNo: '+1-555-0321', address: '321 Elm St, Houston, TX 77001', healthIssue: 'Migraine, Anxiety', medicines: [], nextAppointment: null },
+        { adminNo: 'ADM005', name: 'David Wilson', age: 55, gender: 'Male', bloodGroup: 'A-', contactNo: '+1-555-0654', address: '654 Maple Dr, Phoenix, AZ 85001', healthIssue: 'Arthritis, High Cholesterol', medicines: [], nextAppointment: null }
       ];
       
-      for (const patient of samplePatients) {
-        await db.query(
-          'INSERT INTO patients ("adminNo", name, age, gender, "bloodGroup", "contactNo", address, "healthIssue", medicines, "nextAppointment") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
-          patient
-        );
-      }
+      const { error: insertError } = await supabase
+        .from('patients')
+        .insert(samplePatients);
+      
+      if (insertError) throw insertError;
       
       res.status(200).json({ message: 'Sample data initialized successfully' });
     } else {
-      res.status(200).json({ message: 'Database already has data' });
+      res.status(200).json({ message: 'Database already has data', count });
     }
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: 'Error initializing data', error: error.message });
-  } finally {
-    await db.end();
   }
 };

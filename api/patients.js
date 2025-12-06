@@ -1,13 +1,11 @@
-const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 
-// Helper function to create database connection
-function getConnection() {
-  return new Pool({
-    connectionString: process.env.POSTGRES_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
-  });
+// Helper function to create Supabase client
+function getSupabaseClient() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
 }
 
 // Helper function to parse medicines
@@ -42,83 +40,127 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const db = getConnection();
+  const supabase = getSupabaseClient();
   const { adminNo } = req.query;
 
   try {
     if (req.method === 'GET' && !adminNo) {
       // Get all patients
-      const result = await db.query('SELECT * FROM patients ORDER BY "createdAt" DESC');
-      const patients = result.rows.map(patient => ({
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*')
+        .order('createdAt', { ascending: false });
+      
+      if (error) throw error;
+      
+      const patients = data.map(patient => ({
         ...patient,
         medicines: parseMedicines(patient.medicines),
-        nextAppointment: formatDate(patient.nextappointment)
+        nextAppointment: formatDate(patient.nextAppointment)
       }));
       res.status(200).json(patients);
     } else if (req.method === 'GET' && adminNo) {
       // Get single patient
-      const result = await db.query('SELECT * FROM patients WHERE "adminNo" = $1', [adminNo]);
-      if (result.rows.length === 0) {
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('adminNo', adminNo)
+        .single();
+      
+      if (error) {
         res.status(404).json({ message: 'Patient not found' });
         return;
       }
+      
       const patient = {
-        ...result.rows[0],
-        medicines: parseMedicines(result.rows[0].medicines),
-        nextAppointment: formatDate(result.rows[0].nextappointment)
+        ...data,
+        medicines: parseMedicines(data.medicines),
+        nextAppointment: formatDate(data.nextAppointment)
       };
       res.status(200).json(patient);
     } else if (req.method === 'POST') {
-      // Add new patient
-      const result = await db.query('SELECT "adminNo" FROM patients ORDER BY id DESC LIMIT 1');
+      // Add new patient - get last adminNo
+      const { data: lastPatient } = await supabase
+        .from('patients')
+        .select('adminNo')
+        .order('id', { ascending: false })
+        .limit(1)
+        .single();
+      
       let nextNumber = 1;
-      if (result.rows.length > 0) {
-        const lastAdminNo = result.rows[0].adminNo;
-        const lastNumber = parseInt(lastAdminNo.replace('ADM', ''));
+      if (lastPatient) {
+        const lastNumber = parseInt(lastPatient.adminNo.replace('ADM', ''));
         nextNumber = lastNumber + 1;
       }
       const newAdminNo = `ADM${String(nextNumber).padStart(3, '0')}`;
       
       const { name, age, gender, bloodGroup, contactNo, address, healthIssue, medicines, nextAppointment } = req.body;
       
-      const insertResult = await db.query(
-        'INSERT INTO patients ("adminNo", name, age, gender, "bloodGroup", "contactNo", address, "healthIssue", medicines, "nextAppointment") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id',
-        [newAdminNo, name, age, gender, bloodGroup, contactNo, address, healthIssue, JSON.stringify(medicines || []), nextAppointment || null]
-      );
+      const { data, error } = await supabase
+        .from('patients')
+        .insert([{
+          adminNo: newAdminNo,
+          name,
+          age,
+          gender,
+          bloodGroup,
+          contactNo,
+          address,
+          healthIssue,
+          medicines: medicines || [],
+          nextAppointment: nextAppointment || null
+        }])
+        .select()
+        .single();
       
-      const newPatient = await db.query('SELECT * FROM patients WHERE id = $1', [insertResult.rows[0].id]);
+      if (error) throw error;
+      
       const patient = {
-        ...newPatient.rows[0],
-        medicines: parseMedicines(newPatient.rows[0].medicines),
-        nextAppointment: formatDate(newPatient.rows[0].nextappointment)
+        ...data,
+        medicines: parseMedicines(data.medicines),
+        nextAppointment: formatDate(data.nextAppointment)
       };
       res.status(201).json(patient);
     } else if (req.method === 'PUT' && adminNo) {
       // Update patient
       const { name, age, gender, bloodGroup, contactNo, address, healthIssue, medicines, nextAppointment } = req.body;
       
-      const result = await db.query(
-        'UPDATE patients SET name = $1, age = $2, gender = $3, "bloodGroup" = $4, "contactNo" = $5, address = $6, "healthIssue" = $7, medicines = $8, "nextAppointment" = $9 WHERE "adminNo" = $10',
-        [name, age, gender, bloodGroup, contactNo, address, healthIssue, JSON.stringify(medicines || []), nextAppointment || null, adminNo]
-      );
+      const { data, error } = await supabase
+        .from('patients')
+        .update({
+          name,
+          age,
+          gender,
+          bloodGroup,
+          contactNo,
+          address,
+          healthIssue,
+          medicines: medicines || [],
+          nextAppointment: nextAppointment || null
+        })
+        .eq('adminNo', adminNo)
+        .select()
+        .single();
       
-      if (result.rowCount === 0) {
+      if (error) {
         res.status(404).json({ message: 'Patient not found' });
         return;
       }
       
-      const updatedPatient = await db.query('SELECT * FROM patients WHERE "adminNo" = $1', [adminNo]);
       const patient = {
-        ...updatedPatient.rows[0],
-        medicines: parseMedicines(updatedPatient.rows[0].medicines),
-        nextAppointment: formatDate(updatedPatient.rows[0].nextappointment)
+        ...data,
+        medicines: parseMedicines(data.medicines),
+        nextAppointment: formatDate(data.nextAppointment)
       };
       res.status(200).json(patient);
     } else if (req.method === 'DELETE' && adminNo) {
       // Delete patient
-      const result = await db.query('DELETE FROM patients WHERE "adminNo" = $1', [adminNo]);
+      const { error } = await supabase
+        .from('patients')
+        .delete()
+        .eq('adminNo', adminNo);
       
-      if (result.rowCount === 0) {
+      if (error) {
         res.status(404).json({ message: 'Patient not found' });
         return;
       }
@@ -130,7 +172,5 @@ module.exports = async (req, res) => {
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: 'Error processing request', error: error.message });
-  } finally {
-    await db.end();
   }
 };
