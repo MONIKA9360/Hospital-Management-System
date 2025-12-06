@@ -1,19 +1,12 @@
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 
 // Helper function to create database connection
 function getConnection() {
-  return mysql.createPool({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    ssl: process.env.DB_HOST && process.env.DB_HOST.includes('aivencloud') ? {
-      rejectUnauthorized: true
-    } : undefined
+  return new Pool({
+    connectionString: process.env.POSTGRES_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
   });
 }
 
@@ -37,9 +30,9 @@ module.exports = async (req, res) => {
   const db = getConnection();
 
   try {
-    const [rows] = await db.query('SELECT COUNT(*) as count FROM patients');
+    const result = await db.query('SELECT COUNT(*) as count FROM patients');
     
-    if (rows[0].count === 0) {
+    if (parseInt(result.rows[0].count) === 0) {
       const samplePatients = [
         ['ADM001', 'John Smith', 35, 'Male', 'A+', '+1-555-0123', '123 Main St, New York, NY 10001', 'Hypertension, Diabetes', '[]', null],
         ['ADM002', 'Sarah Johnson', 28, 'Female', 'B-', '+1-555-0456', '456 Oak Ave, Los Angeles, CA 90210', 'Asthma', '[]', null],
@@ -50,7 +43,7 @@ module.exports = async (req, res) => {
       
       for (const patient of samplePatients) {
         await db.query(
-          'INSERT INTO patients (adminNo, name, age, gender, bloodGroup, contactNo, address, healthIssue, medicines, nextAppointment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO patients ("adminNo", name, age, gender, "bloodGroup", "contactNo", address, "healthIssue", medicines, "nextAppointment") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
           patient
         );
       }

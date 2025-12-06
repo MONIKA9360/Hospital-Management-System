@@ -1,19 +1,12 @@
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 
 // Helper function to create database connection
 function getConnection() {
-  return mysql.createPool({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    ssl: process.env.DB_HOST && process.env.DB_HOST.includes('aivencloud') ? {
-      rejectUnauthorized: true
-    } : undefined
+  return new Pool({
+    connectionString: process.env.POSTGRES_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
   });
 }
 
@@ -55,43 +48,43 @@ module.exports = async (req, res) => {
   try {
     if (req.method === 'GET') {
       // Get single patient
-      const [rows] = await db.query('SELECT * FROM patients WHERE adminNo = ?', [adminNo]);
-      if (rows.length === 0) {
+      const result = await db.query('SELECT * FROM patients WHERE "adminNo" = $1', [adminNo]);
+      if (result.rows.length === 0) {
         res.status(404).json({ message: 'Patient not found' });
         return;
       }
       const patient = {
-        ...rows[0],
-        medicines: parseMedicines(rows[0].medicines),
-        nextAppointment: formatDate(rows[0].nextAppointment)
+        ...result.rows[0],
+        medicines: parseMedicines(result.rows[0].medicines),
+        nextappointment: formatDate(result.rows[0].nextappointment)
       };
       res.status(200).json(patient);
     } else if (req.method === 'PUT') {
       // Update patient
       const { name, age, gender, bloodGroup, contactNo, address, healthIssue, medicines, nextAppointment } = req.body;
       
-      const [result] = await db.query(
-        'UPDATE patients SET name = ?, age = ?, gender = ?, bloodGroup = ?, contactNo = ?, address = ?, healthIssue = ?, medicines = ?, nextAppointment = ? WHERE adminNo = ?',
+      const result = await db.query(
+        'UPDATE patients SET name = $1, age = $2, gender = $3, "bloodGroup" = $4, "contactNo" = $5, address = $6, "healthIssue" = $7, medicines = $8, "nextAppointment" = $9 WHERE "adminNo" = $10',
         [name, age, gender, bloodGroup, contactNo, address, healthIssue, JSON.stringify(medicines || []), nextAppointment || null, adminNo]
       );
       
-      if (result.affectedRows === 0) {
+      if (result.rowCount === 0) {
         res.status(404).json({ message: 'Patient not found' });
         return;
       }
       
-      const [updatedPatient] = await db.query('SELECT * FROM patients WHERE adminNo = ?', [adminNo]);
+      const updatedPatient = await db.query('SELECT * FROM patients WHERE "adminNo" = $1', [adminNo]);
       const patient = {
-        ...updatedPatient[0],
-        medicines: parseMedicines(updatedPatient[0].medicines),
-        nextAppointment: formatDate(updatedPatient[0].nextAppointment)
+        ...updatedPatient.rows[0],
+        medicines: parseMedicines(updatedPatient.rows[0].medicines),
+        nextappointment: formatDate(updatedPatient.rows[0].nextappointment)
       };
       res.status(200).json(patient);
     } else if (req.method === 'DELETE') {
       // Delete patient
-      const [result] = await db.query('DELETE FROM patients WHERE adminNo = ?', [adminNo]);
+      const result = await db.query('DELETE FROM patients WHERE "adminNo" = $1', [adminNo]);
       
-      if (result.affectedRows === 0) {
+      if (result.rowCount === 0) {
         res.status(404).json({ message: 'Patient not found' });
         return;
       }

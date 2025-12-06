@@ -1,19 +1,12 @@
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 
 // Helper function to create database connection
 function getConnection() {
-  return mysql.createPool({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    ssl: process.env.DB_HOST && process.env.DB_HOST.includes('aivencloud') ? {
-      rejectUnauthorized: true
-    } : undefined
+  return new Pool({
+    connectionString: process.env.POSTGRES_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
   });
 }
 
@@ -54,19 +47,19 @@ module.exports = async (req, res) => {
   try {
     if (req.method === 'GET') {
       // Get all patients
-      const [rows] = await db.query('SELECT * FROM patients ORDER BY createdAt DESC');
-      const patients = rows.map(patient => ({
+      const result = await db.query('SELECT * FROM patients ORDER BY "createdAt" DESC');
+      const patients = result.rows.map(patient => ({
         ...patient,
         medicines: parseMedicines(patient.medicines),
-        nextAppointment: formatDate(patient.nextAppointment)
+        nextappointment: formatDate(patient.nextappointment)
       }));
       res.status(200).json(patients);
     } else if (req.method === 'POST') {
       // Add new patient
-      const [result] = await db.query('SELECT adminNo FROM patients ORDER BY id DESC LIMIT 1');
+      const result = await db.query('SELECT "adminNo" FROM patients ORDER BY id DESC LIMIT 1');
       let nextNumber = 1;
-      if (result.length > 0) {
-        const lastAdminNo = result[0].adminNo;
+      if (result.rows.length > 0) {
+        const lastAdminNo = result.rows[0].adminNo;
         const lastNumber = parseInt(lastAdminNo.replace('ADM', ''));
         nextNumber = lastNumber + 1;
       }
@@ -74,16 +67,16 @@ module.exports = async (req, res) => {
       
       const { name, age, gender, bloodGroup, contactNo, address, healthIssue, medicines, nextAppointment } = req.body;
       
-      const [insertResult] = await db.query(
-        'INSERT INTO patients (adminNo, name, age, gender, bloodGroup, contactNo, address, healthIssue, medicines, nextAppointment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      const insertResult = await db.query(
+        'INSERT INTO patients ("adminNo", name, age, gender, "bloodGroup", "contactNo", address, "healthIssue", medicines, "nextAppointment") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id',
         [adminNo, name, age, gender, bloodGroup, contactNo, address, healthIssue, JSON.stringify(medicines || []), nextAppointment || null]
       );
       
-      const [newPatient] = await db.query('SELECT * FROM patients WHERE id = ?', [insertResult.insertId]);
+      const newPatient = await db.query('SELECT * FROM patients WHERE id = $1', [insertResult.rows[0].id]);
       const patient = {
-        ...newPatient[0],
-        medicines: parseMedicines(newPatient[0].medicines),
-        nextAppointment: formatDate(newPatient[0].nextAppointment)
+        ...newPatient.rows[0],
+        medicines: parseMedicines(newPatient.rows[0].medicines),
+        nextappointment: formatDate(newPatient.rows[0].nextappointment)
       };
       res.status(201).json(patient);
     } else {
