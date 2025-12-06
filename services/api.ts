@@ -19,7 +19,7 @@ export const patientAPI = {
 
   async getPatient(adminNo: string): Promise<Patient | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/patients/${adminNo}`);
+      const response = await fetch(`${API_BASE_URL}/patients?adminNo=${adminNo}`);
       if (!response.ok) throw new Error('Failed to fetch patient');
       return await response.json();
     } catch (error) {
@@ -39,7 +39,7 @@ export const patientAPI = {
   },
 
   async updatePatient(adminNo: string, patient: Patient): Promise<Patient> {
-    const response = await fetch(`${API_BASE_URL}/patients/${adminNo}`, {
+    const response = await fetch(`${API_BASE_URL}/patients?adminNo=${adminNo}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patient),
@@ -49,7 +49,7 @@ export const patientAPI = {
   },
 
   async deletePatient(adminNo: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/patients/${adminNo}`, {
+    const response = await fetch(`${API_BASE_URL}/patients?adminNo=${adminNo}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete patient');
