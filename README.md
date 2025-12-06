@@ -43,7 +43,7 @@ A full-stack hospital management system for managing patient records, medicines,
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/MONIKA0360/HEALTH_CARE.git
+git clone https://github.com/MONIKA9360/HEALTH_CARE.git
 cd HEALTH_CARE
 ```
 
@@ -245,8 +245,8 @@ This project is licensed under the MIT License.
 
 ## 👤 Author
 
-**MONIKA0360**
-- GitHub: [@MONIKA0360](https://github.com/MONIKA0360)
+**MONIKA9360**
+- GitHub: [@MONIKA9360](https://github.com/MONIKA9360)
 
 ## 🙏 Acknowledgments
 
