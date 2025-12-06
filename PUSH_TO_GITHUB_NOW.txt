@@ -1,0 +1,110 @@
+========================================
+   PUSH TO GITHUB - QUICK STEPS
+========================================
+
+Your GitHub repository is ready:
+https://github.com/MONIKA0360/HEALTH_CARE
+
+========================================
+STEP 1: INSTALL GIT (5 minutes)
+========================================
+
+1. Go to: https://git-scm.com/download/win
+
+2. Click "Click here to download" (64-bit)
+
+3. Run the installer
+   - Click "Next" for all options
+   - Use default settings
+   - Click "Install"
+
+4. Restart your terminal after installation
+
+========================================
+STEP 2: VERIFY GIT IS INSTALLED
+========================================
+
+Open a NEW terminal and run:
+
+    git --version
+
+Should show: git version 2.x.x
+
+========================================
+STEP 3: CONFIGURE GIT (First time only)
+========================================
+
+Run these commands (replace with your email):
+
+    git config --global user.name "MONIKA0360"
+    git config --global user.email "your-email@example.com"
+
+========================================
+STEP 4: PUSH YOUR PROJECT
+========================================
+
+Navigate to your project folder:
+
+    cd "C:\Users\monik\OneDrive\Attachments\Desktop\ui hospital-management"
+
+Initialize Git:
+
+    git init
+
+Add all files:
+
+    git add .
+
+Commit:
+
+    git commit -m "Initial commit: Hospital Management System"
+
+Add GitHub remote:
+
+    git remote add origin https://github.com/MONIKA0360/HEALTH_CARE.git
+
+Set branch to main:
+
+    git branch -M main
+
+Push to GitHub:
+
+    git push -u origin main
+
+========================================
+STEP 5: ENTER CREDENTIALS
+========================================
+
+When prompted:
+- Username: MONIKA0360
+- Password: Use Personal Access Token (NOT your GitHub password)
+
+How to get Personal Access Token:
+1. Go to: https://github.com/settings/tokens
+2. Click "Generate new token (classic)"
+3. Name: "Hospital Project"
+4. Select: ✓ repo (all checkboxes)
+5. Click "Generate token"
+6. COPY THE TOKEN (you'll only see it once!)
+7. Use this token as password
+
+========================================
+DONE! 🎉
+========================================
+
+Your code will be on GitHub at:
+https://github.com/MONIKA0360/HEALTH_CARE
+
+========================================
+QUICK COPY-PASTE COMMANDS:
+========================================
+
+cd "C:\Users\monik\OneDrive\Attachments\Desktop\ui hospital-management"
+git init
+git add .
+git commit -m "Initial commit: Hospital Management System"
+git remote add origin https://github.com/MONIKA0360/HEALTH_CARE.git
+git branch -M main
+git push -u origin main
+
+========================================
