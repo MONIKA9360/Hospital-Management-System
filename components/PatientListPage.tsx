@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus, Search, Trash2, User, Download } from 'lucide-react';
-import { Patient } from '../types';
+import { ArrowLeft, Plus, Search, Trash2, User, Download, Bed, TestTube } from 'lucide-react';
+import { Patient, Page } from '../types';
+import ThemeToggle from './ThemeToggle';
 import jsPDF from 'jspdf';
 
 interface PatientListPageProps {
@@ -9,6 +10,7 @@ interface PatientListPageProps {
   onAddPatient: (patient: Omit<Patient, 'adminNo'>) => void;
   onDeletePatient: (adminNo: string) => void;
   onBack: () => void;
+  onNavigate: (page: Page) => void;
 }
 
 const PatientListPage: React.FC<PatientListPageProps> = ({
@@ -17,6 +19,7 @@ const PatientListPage: React.FC<PatientListPageProps> = ({
   onAddPatient,
   onDeletePatient,
   onBack,
+  onNavigate,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -105,18 +108,33 @@ const PatientListPage: React.FC<PatientListPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-3 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-3 sm:p-6 transition-colors duration-200">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
           <button
             onClick={onBack}
-            className="flex items-center text-gray-700 hover:text-gray-900 font-semibold h-10"
+            className="flex items-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 font-semibold h-10"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Logout
           </button>
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Patient Management</h1>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <ThemeToggle />
+            <button
+              onClick={() => onNavigate(Page.RoomManagement)}
+              className="flex items-center justify-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-3 sm:px-4 py-2 rounded-lg shadow-md h-10 text-sm sm:text-base"
+            >
+              <Bed className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" />
+              <span className="hidden sm:inline">Rooms</span>
+            </button>
+            <button
+              onClick={() => onNavigate(Page.LabTests)}
+              className="flex items-center justify-center bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white px-3 sm:px-4 py-2 rounded-lg shadow-md h-10 text-sm sm:text-base"
+            >
+              <TestTube className="w-4 h-4 sm:w-5 sm:h-5 sm:mr-2" />
+              <span className="hidden sm:inline">Lab Tests</span>
+            </button>
             <button
               onClick={handleDownloadPDF}
               className="flex items-center justify-center bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-3 sm:px-4 py-2 rounded-lg shadow-md h-10 text-sm sm:text-base"
