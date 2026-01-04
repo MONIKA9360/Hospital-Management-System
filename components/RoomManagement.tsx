@@ -23,7 +23,7 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ onNavigate, onLogout })
   useEffect(() => {
     // Initialize with sample data
     const sampleRooms: Room[] = [
-      { id: '1', roomNumber: '101', type: 'ICU', status: 'Occupied', patientId: 'ADM001', patientName: 'John Smith', floor: 1, capacity: 1, occupiedBeds: 1 },
+      { id: '1', roomNumber: '101', type: 'ICU', status: 'Occupied', patientId: 'ADM001', patientName: 'John Smith', floor: 1, capacity: 2, occupiedBeds: 1 },
       { id: '2', roomNumber: '102', type: 'General', status: 'Available', floor: 1, capacity: 2, occupiedBeds: 0 },
       { id: '3', roomNumber: '201', type: 'Private', status: 'Occupied', patientId: 'ADM002', patientName: 'Sarah Johnson', floor: 2, capacity: 1, occupiedBeds: 1 },
       { id: '4', roomNumber: '202', type: 'General', status: 'Available', floor: 2, capacity: 4, occupiedBeds: 0 },
@@ -32,13 +32,15 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ onNavigate, onLogout })
 
     const sampleBeds: BedType[] = [
       { id: '1', bedNumber: 'B1', roomId: '1', status: 'Occupied', patientId: 'ADM001', patientName: 'John Smith' },
-      { id: '2', bedNumber: 'B1', roomId: '2', status: 'Available' },
-      { id: '3', bedNumber: 'B2', roomId: '2', status: 'Available' },
-      { id: '4', bedNumber: 'B1', roomId: '3', status: 'Occupied', patientId: 'ADM002', patientName: 'Sarah Johnson' },
-      { id: '5', bedNumber: 'B1', roomId: '4', status: 'Available' },
-      { id: '6', bedNumber: 'B2', roomId: '4', status: 'Available' },
-      { id: '7', bedNumber: 'B3', roomId: '4', status: 'Available' },
-      { id: '8', bedNumber: 'B4', roomId: '4', status: 'Available' }
+      { id: '2', bedNumber: 'B2', roomId: '1', status: 'Available' }, // Second bed in ICU
+      { id: '3', bedNumber: 'B1', roomId: '2', status: 'Available' },
+      { id: '4', bedNumber: 'B2', roomId: '2', status: 'Available' },
+      { id: '5', bedNumber: 'B1', roomId: '3', status: 'Occupied', patientId: 'ADM002', patientName: 'Sarah Johnson' },
+      { id: '6', bedNumber: 'B1', roomId: '4', status: 'Available' },
+      { id: '7', bedNumber: 'B2', roomId: '4', status: 'Available' },
+      { id: '8', bedNumber: 'B3', roomId: '4', status: 'Available' },
+      { id: '9', bedNumber: 'B4', roomId: '4', status: 'Available' },
+      { id: '10', bedNumber: 'B1', roomId: '5', status: 'Available' }
     ];
 
     setRooms(sampleRooms);
@@ -46,9 +48,25 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ onNavigate, onLogout })
   }, []);
 
   const handleAddRoom = () => {
+    // Auto-generate room number if empty
+    let roomNumber = newRoom.roomNumber;
+    if (!roomNumber) {
+      const existingNumbers = rooms
+        .filter(r => r.floor === newRoom.floor)
+        .map(r => parseInt(r.roomNumber))
+        .filter(n => !isNaN(n))
+        .sort((a, b) => a - b);
+      
+      let nextNumber = newRoom.floor * 100 + 1; // Start from X01 for each floor
+      while (existingNumbers.includes(nextNumber)) {
+        nextNumber++;
+      }
+      roomNumber = nextNumber.toString();
+    }
+
     const room: Room = {
       id: Date.now().toString(),
-      roomNumber: newRoom.roomNumber,
+      roomNumber: roomNumber,
       type: newRoom.type,
       status: 'Available',
       floor: newRoom.floor,
@@ -265,8 +283,11 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ onNavigate, onLogout })
                   value={newRoom.roomNumber}
                   onChange={(e) => setNewRoom({ ...newRoom, roomNumber: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder="e.g., 101"
+                  placeholder={`Auto-generate (e.g., ${newRoom.floor}01)`}
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Leave empty to auto-generate room number
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -274,13 +295,23 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ onNavigate, onLogout })
                 </label>
                 <select
                   value={newRoom.type}
-                  onChange={(e) => setNewRoom({ ...newRoom, type: e.target.value as Room['type'] })}
+                  onChange={(e) => {
+                    const type = e.target.value as Room['type'];
+                    // Set default capacity based on room type
+                    let defaultCapacity = 1;
+                    if (type === 'ICU') defaultCapacity = 2;
+                    else if (type === 'General') defaultCapacity = 4;
+                    else if (type === 'Private') defaultCapacity = 1;
+                    else if (type === 'Emergency') defaultCapacity = 1;
+                    
+                    setNewRoom({ ...newRoom, type, capacity: defaultCapacity });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="General">General</option>
-                  <option value="ICU">ICU</option>
-                  <option value="Private">Private</option>
-                  <option value="Emergency">Emergency</option>
+                  <option value="General">General (4 beds)</option>
+                  <option value="ICU">ICU (2 beds)</option>
+                  <option value="Private">Private (1 bed)</option>
+                  <option value="Emergency">Emergency (1 bed)</option>
                 </select>
               </div>
               <div>
@@ -318,8 +349,7 @@ const RoomManagement: React.FC<RoomManagementProps> = ({ onNavigate, onLogout })
               </button>
               <button
                 onClick={handleAddRoom}
-                disabled={!newRoom.roomNumber}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
                 Add Room
               </button>
